@@ -194,12 +194,15 @@ class WhatsApp_Setup_Plugin
         $bottom = isset($settings['button_position_bottom']) ? $settings['button_position_bottom'] : 20;
         $size = isset($settings['button_size']) ? $settings['button_size'] : 50;
 
+        // URL da imagem do WhatsApp
+        $whatsapp_image = WASP_PLUGIN_URL . 'whatsapp.png';
+
 ?>
 
         <!-- Lucas Setup Plugin -->
         <?php if ($this->should_show_button()): ?>
             <a id="whatsapp" href="<?php echo esc_url($whatsapp_link); ?>" target="_blank" rel="noopener noreferrer">
-                <img src="./whatsapp.png"
+                <img src="<?php echo esc_url($whatsapp_image); ?>"
                     alt="WhatsApp"
                     width="<?php echo esc_attr($size); ?>px"
                     height="<?php echo esc_attr($size); ?>px">
