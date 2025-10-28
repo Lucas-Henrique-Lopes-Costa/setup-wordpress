@@ -1,0 +1,128 @@
+/* Lucas Setup - Admin Styles */
+
+.wasp-settings {
+    max-width: 1200px;
+}
+
+.wasp-settings h1 {
+    display: flex;
+    align-items: center;
+    color: #25D366;
+}
+
+.wasp-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.wasp-card h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #25D366;
+    color: #2c3338;
+}
+
+.wasp-card h3 {
+    margin-top: 0;
+    color: #2c3338;
+}
+
+.wasp-info {
+    background: #f0f6fc;
+    border-left: 4px solid #25D366;
+}
+
+.wasp-info ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.wasp-info ul li {
+    padding: 5px 0;
+    font-size: 14px;
+}
+
+.wasp-settings .form-table th {
+    width: 200px;
+    font-weight: 600;
+}
+
+.wasp-settings .form-table td {
+    padding: 15px 10px;
+}
+
+.wasp-settings textarea.large-text {
+    height: 120px;
+    font-family: monospace;
+}
+
+.wasp-settings input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.wasp-settings label {
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.wasp-settings .description {
+    color: #646970;
+    font-size: 13px;
+    font-style: italic;
+    margin-top: 5px;
+}
+
+#specific_pages {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    background: #f6f7f7;
+    border-radius: 4px;
+}
+
+#specific_pages label {
+    display: block;
+    padding: 3px 0;
+}
+
+.submit {
+    padding-top: 0;
+}
+
+.submit .button-primary {
+    background: #25D366;
+    border-color: #1ea952;
+    text-shadow: none;
+    box-shadow: none;
+    font-size: 14px;
+    padding: 8px 20px;
+    height: auto;
+}
+
+.submit .button-primary:hover {
+    background: #1ea952;
+    border-color: #178d43;
+}
+
+.submit .button-primary:active {
+    background: #178d43;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+
+    .wasp-settings .form-table th,
+    .wasp-settings .form-table td {
+        display: block;
+        width: 100%;
+        padding: 10px 0;
+    }
+
+    .wasp-settings .form-table th {
+        padding-bottom: 5px;
+    }
+}
