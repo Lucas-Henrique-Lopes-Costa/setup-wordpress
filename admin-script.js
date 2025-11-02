@@ -15,53 +15,56 @@ jQuery(document).ready(function ($) {
         }
     });
 
-    // Preview do número de telefone
-    $('#phone_numbers, #default_message').on('input', function () {
+    // Mostrar/Esconder campo de link customizado dependendo do modo selecionado
+    function toggleLinkModeFields() {
+        var mode = $('input[name$="[link_mode]"]:checked').val();
+        if (mode === 'custom') {
+            $('.wasp-custom-link-row').show();
+        } else {
+            $('.wasp-custom-link-row').hide();
+        }
+    }
+
+    // Iniciar toggle no carregamento
+    try {
+        toggleLinkModeFields();
+    } catch (e) {
+        // ignore if selector not available in this context
+    }
+
+    // Quando o modo mudar
+    $(document).on('change', 'input[name$="[link_mode]"]', function () {
+        toggleLinkModeFields();
+    });
+
+    // Preview (melhorado para mostrar link personalizado quando aplicável)
+    $('#phone_numbers, #default_message, #custom_link').on('input', function () {
         updatePreview();
     });
 
     function updatePreview() {
+        var mode = $('input[name$="[link_mode]"]:checked').val() || 'phone';
+        var message = $('#default_message').val() || '';
+
+        if (mode === 'custom') {
+            var custom = $('#custom_link').val().trim();
+            if (custom !== '') {
+                console.log('Preview Custom Link:', custom);
+                return;
+            }
+        }
+
         var phones = $('#phone_numbers').val().split('\n').filter(function (line) {
             return line.trim() !== '';
         });
-
-        var message = $('#default_message').val();
 
         if (phones.length > 0) {
             var randomPhone = phones[Math.floor(Math.random() * phones.length)].trim();
             var encodedMessage = encodeURIComponent(message);
             var previewLink = 'https://wa.me/' + randomPhone + '?text=' + encodedMessage;
-
             console.log('Preview WhatsApp Link:', previewLink);
         }
     }
-
-    // Validação de formulário
-    $('form').on('submit', function (e) {
-        var phones = $('#phone_numbers').val().trim();
-
-        if (phones === '') {
-            alert('Por favor, adicione pelo menos um número de telefone.');
-            e.preventDefault();
-            return false;
-        }
-
-        var phoneLines = phones.split('\n');
-        var invalidPhones = [];
-
-        phoneLines.forEach(function (phone) {
-            phone = phone.trim();
-            if (phone !== '' && !/^\d{10,15}$/.test(phone)) {
-                invalidPhones.push(phone);
-            }
-        });
-
-        if (invalidPhones.length > 0) {
-            alert('Os seguintes números parecem inválidos:\n\n' + invalidPhones.join('\n') + '\n\nCertifique-se de incluir o código do país e DDD sem espaços ou caracteres especiais.');
-            e.preventDefault();
-            return false;
-        }
-    });
 
     // Adicionar tooltip
     $('.description').each(function () {

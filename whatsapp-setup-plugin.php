@@ -51,6 +51,10 @@ class WhatsApp_Setup_Plugin
             'button_enabled' => true,
             'replace_hash_links' => true,
             'pages_to_show' => array('all'),
+            'link_mode' => 'phone',
+            'custom_link' => '',
+            // array page_id => custom link
+            'page_custom_links' => array(),
             'button_position_right' => '20',
             'button_position_bottom' => '20',
             'button_size' => '50'
@@ -116,6 +120,24 @@ class WhatsApp_Setup_Plugin
 
         // Páginas para mostrar
         $sanitized['pages_to_show'] = isset($input['pages_to_show']) ? $input['pages_to_show'] : array('all');
+
+        // Modo de link: 'phone' (usar números) ou 'custom' (usar link personalizado)
+        $sanitized['link_mode'] = (isset($input['link_mode']) && $input['link_mode'] === 'custom') ? 'custom' : 'phone';
+
+        // Link personalizado global (opcional)
+        $sanitized['custom_link'] = isset($input['custom_link']) ? esc_url_raw($input['custom_link']) : '';
+
+        // Links personalizados por página (opcional)
+        $sanitized['page_custom_links'] = array();
+        if (isset($input['page_custom_links']) && is_array($input['page_custom_links'])) {
+            foreach ($input['page_custom_links'] as $page_id => $link) {
+                $page_id = intval($page_id);
+                $link = trim($link);
+                if ($link !== '') {
+                    $sanitized['page_custom_links'][$page_id] = esc_url_raw($link);
+                }
+            }
+        }
 
         // Posições e tamanho
         $sanitized['button_position_right'] = isset($input['button_position_right']) ? intval($input['button_position_right']) : 20;
@@ -197,11 +219,29 @@ class WhatsApp_Setup_Plugin
         // URL da imagem do WhatsApp
         $whatsapp_image = WASP_PLUGIN_URL . 'whatsapp.png';
 
+        // Determinar link de substituição seguindo o modo selecionado
+        $current_page_id = get_the_ID();
+        $replacement_link = '';
+        if (isset($settings['link_mode']) && $settings['link_mode'] === 'custom') {
+            // Se estiver no modo custom, prioriza link por página, depois link global
+            if (!empty($settings['page_custom_links']) && isset($settings['page_custom_links'][$current_page_id])) {
+                $replacement_link = $settings['page_custom_links'][$current_page_id];
+            } elseif (!empty($settings['custom_link'])) {
+                $replacement_link = $settings['custom_link'];
+            } else {
+                // fallback para WhatsApp se não houver custom link
+                $replacement_link = $whatsapp_link;
+            }
+        } else {
+            // modo 'phone' (padrão) - usa link montado com telefone
+            $replacement_link = $whatsapp_link;
+        }
+
 ?>
 
         <!-- Lucas Setup Plugin -->
         <?php if ($this->should_show_button()): ?>
-            <a id="whatsapp" href="<?php echo esc_url($whatsapp_link); ?>" target="_blank" rel="noopener noreferrer">
+            <a id="whatsapp" href="<?php echo esc_url($replacement_link); ?>" target="_blank" rel="noopener noreferrer">
                 <img src="<?php echo esc_url($whatsapp_image); ?>"
                     alt="WhatsApp"
                     width="<?php echo esc_attr($size); ?>px"
@@ -304,7 +344,7 @@ class WhatsApp_Setup_Plugin
                     var buttons = document.querySelectorAll('a[href="#"]');
 
                     // Novo link do WhatsApp
-                    var newLink = "<?php echo esc_js($whatsapp_link); ?>";
+                    var newLink = "<?php echo esc_js($replacement_link); ?>";
 
                     // Loop através de todos os botões encontrados e altera o href
                     buttons.forEach(function(button) {
@@ -409,6 +449,35 @@ class WhatsApp_Setup_Plugin
                                     class="regular-text"
                                     placeholder="Olá, vim pelo site!">
                                 <p class="description">Mensagem que será enviada automaticamente ao clicar no botão.</p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">Modo de Link</th>
+                            <td>
+                                <label style="margin-right:15px;">
+                                    <input type="radio" name="<?php echo esc_attr($this->option_name); ?>[link_mode]" value="phone" <?php checked(isset($settings['link_mode']) ? $settings['link_mode'] : 'phone', 'phone'); ?>> Usar números de telefone
+                                </label>
+                                <label>
+                                    <input type="radio" name="<?php echo esc_attr($this->option_name); ?>[link_mode]" value="custom" <?php checked(isset($settings['link_mode']) ? $settings['link_mode'] : '', 'custom'); ?>> Usar link personalizado
+                                </label>
+                                <p class="description">Escolha se o botão deve abrir um link montado com os números (aleatório) ou um link totalmente personalizado.</p>
+                            </td>
+                        </tr>
+
+                        <tr class="wasp-custom-link-row" style="<?php echo (isset($settings['link_mode']) && $settings['link_mode'] === 'custom') ? '' : 'display:none;'; ?>">
+                            <th scope="row">
+                                <label for="custom_link">Link Personalizado (opcional)</label>
+                            </th>
+                            <td>
+                                <input
+                                    type="text"
+                                    name="<?php echo esc_attr($this->option_name); ?>[custom_link]"
+                                    id="custom_link"
+                                    value="<?php echo esc_attr(isset($settings['custom_link']) ? $settings['custom_link'] : ''); ?>"
+                                    class="regular-text"
+                                    placeholder="https://exemplo.com/lead?utm=site">
+                                <p class="description">Se preenchido e o modo for "Usar link personalizado", este link será utilizado em vez do WhatsApp.</p>
                             </td>
                         </tr>
                     </table>
@@ -529,6 +598,15 @@ class WhatsApp_Setup_Plugin
                                                 <?php checked(in_array($page->ID, $settings['pages_to_show']), true); ?>>
                                             <?php echo esc_html($page->post_title); ?>
                                         </label><br>
+                                        <div style="margin-left:20px; margin-bottom:8px;">
+                                            <label style="font-size:13px;color:#666;">Link personalizado para esta página (opcional):</label>
+                                            <input
+                                                type="text"
+                                                name="<?php echo esc_attr($this->option_name); ?>[page_custom_links][<?php echo esc_attr($page->ID); ?>]"
+                                                value="<?php echo isset($settings['page_custom_links'][$page->ID]) ? esc_attr($settings['page_custom_links'][$page->ID]) : ''; ?>"
+                                                placeholder="https://seusite.com/minha-pagina"
+                                                class="regular-text">
+                                        </div>
                                     <?php endforeach; ?>
                                 </div>
                             </td>
