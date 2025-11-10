@@ -60,8 +60,9 @@ Após ativar o plugin, você verá um novo menu **WhatsApp Setup** no painel do 
 
 - **Ativar Botão**: Ativa/desativa o botão flutuante
 - **Substituir Links "#"**: Converte links vazios em links do WhatsApp
+- **Lado do Botão**: Escolha se o botão fica à direita ou à esquerda
 - **Tamanho do Botão**: Ajuste o tamanho (30-100px)
-- **Posição**: Configure a distância das bordas (direita e inferior)
+- **Posição**: Configure a distância das bordas (lateral e inferior)
 
 ### 3. Páginas para Exibir
 

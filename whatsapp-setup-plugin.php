@@ -55,9 +55,14 @@ class WhatsApp_Setup_Plugin
             'custom_link' => '',
             // array page_id => custom link
             'page_custom_links' => array(),
+            'button_side' => 'right', // 'right' or 'left'
             'button_position_right' => '20',
             'button_position_bottom' => '20',
-            'button_size' => '50'
+            'button_size' => '50',
+            'disable_on_mobile' => false,
+            'maintenance_mode' => false,
+            'maintenance_target' => 'both', // 'mobile', 'desktop', 'both'
+            'maintenance_message' => 'Site em manutenção. Voltaremos em breve!'
         );
 
         if (!get_option($this->option_name)) {
@@ -139,10 +144,21 @@ class WhatsApp_Setup_Plugin
             }
         }
 
+        // Lado do botão
+        $sanitized['button_side'] = isset($input['button_side']) && in_array($input['button_side'], array('left', 'right')) ? $input['button_side'] : 'right';
+
         // Posições e tamanho
         $sanitized['button_position_right'] = isset($input['button_position_right']) ? intval($input['button_position_right']) : 20;
         $sanitized['button_position_bottom'] = isset($input['button_position_bottom']) ? intval($input['button_position_bottom']) : 20;
         $sanitized['button_size'] = isset($input['button_size']) ? intval($input['button_size']) : 50;
+
+        // Desativar botão no mobile
+        $sanitized['disable_on_mobile'] = isset($input['disable_on_mobile']) ? true : false;
+
+        // Modo de manutenção
+        $sanitized['maintenance_mode'] = isset($input['maintenance_mode']) ? true : false;
+        $sanitized['maintenance_target'] = isset($input['maintenance_target']) && in_array($input['maintenance_target'], array('mobile', 'desktop', 'both')) ? $input['maintenance_target'] : 'both';
+        $sanitized['maintenance_message'] = isset($input['maintenance_message']) ? sanitize_text_field($input['maintenance_message']) : 'Site em manutenção. Voltaremos em breve!';
 
         return $sanitized;
     }
@@ -201,6 +217,12 @@ class WhatsApp_Setup_Plugin
             return;
         }
 
+        // Verificar modo de manutenção
+        if (isset($settings['maintenance_mode']) && $settings['maintenance_mode']) {
+            $this->show_maintenance_page($settings);
+            return;
+        }
+
         // Preparar número de telefone (randomizar se houver múltiplos)
         $phones = isset($settings['phone_numbers']) ? $settings['phone_numbers'] : array('5537988347387');
         $random_phone = $phones[array_rand($phones)];
@@ -212,6 +234,7 @@ class WhatsApp_Setup_Plugin
         $whatsapp_link = "https://wa.me/{$random_phone}?text={$message}";
 
         // Posições e tamanho
+        $side = isset($settings['button_side']) ? $settings['button_side'] : 'right';
         $right = isset($settings['button_position_right']) ? $settings['button_position_right'] : 20;
         $bottom = isset($settings['button_position_bottom']) ? $settings['button_position_bottom'] : 20;
         $size = isset($settings['button_size']) ? $settings['button_size'] : 50;
@@ -315,7 +338,7 @@ class WhatsApp_Setup_Plugin
 
             #whatsapp {
                 position: fixed;
-                right: <?php echo esc_attr($right); ?>px;
+                <?php echo $side === 'left' ? 'left' : 'right'; ?>: <?php echo esc_attr($right); ?>px;
                 bottom: <?php echo esc_attr($bottom); ?>px;
                 z-index: 9999;
                 transition: transform 0.3s ease;
@@ -327,8 +350,10 @@ class WhatsApp_Setup_Plugin
 
             @media (max-width: 768px) {
                 #whatsapp {
-                    right: 10px;
+                    <?php echo $side === 'left' ? 'left' : 'right'; ?>: 10px;
                     bottom: 10px;
+                    <?php if (isset($settings['disable_on_mobile']) && $settings['disable_on_mobile']): ?>display: none !important;
+                    <?php endif; ?>
                 }
             }
 
@@ -392,6 +417,140 @@ class WhatsApp_Setup_Plugin
         <!-- /Lucas Setup Plugin -->
 
     <?php
+    }
+
+    /**
+     * Exibir página de manutenção
+     */
+    private function show_maintenance_page($settings)
+    {
+        $maintenance_target = isset($settings['maintenance_target']) ? $settings['maintenance_target'] : 'both';
+        $maintenance_message = isset($settings['maintenance_message']) ? $settings['maintenance_message'] : 'Site em manutenção. Voltaremos em breve!';
+
+        // Detectar se é mobile
+        $is_mobile = wp_is_mobile();
+
+        // Verificar se deve mostrar manutenção baseado no target
+        $show_maintenance = false;
+        if ($maintenance_target === 'both') {
+            $show_maintenance = true;
+        } elseif ($maintenance_target === 'mobile' && $is_mobile) {
+            $show_maintenance = true;
+        } elseif ($maintenance_target === 'desktop' && !$is_mobile) {
+            $show_maintenance = true;
+        }
+
+        if (!$show_maintenance) {
+            return;
+        }
+
+        // Permitir administradores verem o site
+        if (current_user_can('manage_options')) {
+            echo '<div style="position:fixed;top:0;left:0;right:0;background:#ff9800;color:#fff;padding:10px;text-align:center;z-index:99999;">
+                <strong>MODO DE MANUTENÇÃO ATIVO</strong> - Apenas administradores podem ver o site.
+            </div>';
+            return;
+        }
+
+        // Exibir página de manutenção
+    ?>
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Manutenção</title>
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                    background: #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    color: #333;
+                    padding: 20px;
+                }
+
+                /* Estilo para desktop */
+                @media (min-width: 769px) {
+                    body {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: #fff;
+                    }
+
+                    .container {
+                        text-align: center;
+                        max-width: 600px;
+                        background: rgba(255, 255, 255, 0.1);
+                        backdrop-filter: blur(10px);
+                        padding: 60px 40px;
+                        border-radius: 20px;
+                        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                    }
+
+                    .icon {
+                        font-size: 80px;
+                        margin-bottom: 20px;
+                        animation: pulse 2s infinite;
+                    }
+
+                    @keyframes pulse {
+
+                        0%,
+                        100% {
+                            transform: scale(1);
+                        }
+
+                        50% {
+                            transform: scale(1.1);
+                        }
+                    }
+
+                    h1 {
+                        font-size: 2.5em;
+                        margin-bottom: 20px;
+                        font-weight: 700;
+                    }
+
+                    p {
+                        font-size: 1.2em;
+                        line-height: 1.6;
+                        opacity: 0.9;
+                    }
+                }
+
+                /* Mobile: tela totalmente branca sem conteúdo visível */
+                @media (max-width: 768px) {
+                    body {
+                        background: #ffffff;
+                    }
+
+                    .container {
+                        display: none;
+                    }
+                }
+            </style>
+        </head>
+
+        <body>
+            <div class="container">
+                <div class="icon">🔧</div>
+                <h1>Manutenção</h1>
+                <p><?php echo esc_html($maintenance_message); ?></p>
+            </div>
+        </body>
+
+        </html>
+    <?php
+        exit;
     }
 
     /**
@@ -516,6 +675,20 @@ class WhatsApp_Setup_Plugin
                         </tr>
 
                         <tr>
+                            <th scope="row">Desativar Botão no Mobile</th>
+                            <td>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        name="<?php echo esc_attr($this->option_name); ?>[disable_on_mobile]"
+                                        value="1"
+                                        <?php checked(isset($settings['disable_on_mobile']) ? $settings['disable_on_mobile'] : false, true); ?>>
+                                    Ocultar botão flutuante em dispositivos móveis (telas até 768px)
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
                             <th scope="row">Tamanho do Botão</th>
                             <td>
                                 <input
@@ -530,10 +703,25 @@ class WhatsApp_Setup_Plugin
                         </tr>
 
                         <tr>
+                            <th scope="row">Lado do Botão</th>
+                            <td>
+                                <label style="display:block;margin-bottom:8px;">
+                                    <input type="radio" name="<?php echo esc_attr($this->option_name); ?>[button_side]" value="right" <?php checked(isset($settings['button_side']) ? $settings['button_side'] : 'right', 'right'); ?>>
+                                    Direita
+                                </label>
+                                <label style="display:block;">
+                                    <input type="radio" name="<?php echo esc_attr($this->option_name); ?>[button_side]" value="left" <?php checked(isset($settings['button_side']) ? $settings['button_side'] : 'right', 'left'); ?>>
+                                    Esquerda
+                                </label>
+                                <p class="description">Escolha em qual lado da tela o botão será exibido</p>
+                            </td>
+                        </tr>
+
+                        <tr>
                             <th scope="row">Posição do Botão</th>
                             <td>
                                 <label>
-                                    Direita:
+                                    Distância Lateral:
                                     <input
                                         type="number"
                                         name="<?php echo esc_attr($this->option_name); ?>[button_position_right]"
@@ -544,7 +732,7 @@ class WhatsApp_Setup_Plugin
                                 </label>
                                 <br><br>
                                 <label>
-                                    Inferior:
+                                    Distância Inferior:
                                     <input
                                         type="number"
                                         name="<?php echo esc_attr($this->option_name); ?>[button_position_bottom]"
@@ -554,6 +742,61 @@ class WhatsApp_Setup_Plugin
                                         class="small-text"> px
                                 </label>
                                 <p class="description">Distância das bordas da tela (padrão: 20px)</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="wasp-card">
+                    <h2>🚧 Modo de Manutenção</h2>
+
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">Ativar Manutenção</th>
+                            <td>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        name="<?php echo esc_attr($this->option_name); ?>[maintenance_mode]"
+                                        value="1"
+                                        <?php checked(isset($settings['maintenance_mode']) ? $settings['maintenance_mode'] : false, true); ?>>
+                                    Ativar modo de manutenção no site
+                                </label>
+                                <p class="description">Quando ativo, visitantes verão uma página de manutenção. Administradores continuam vendo o site normalmente.</p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">Aplicar em:</th>
+                            <td>
+                                <label style="display:block;margin-bottom:8px;">
+                                    <input type="radio" name="<?php echo esc_attr($this->option_name); ?>[maintenance_target]" value="both" <?php checked(isset($settings['maintenance_target']) ? $settings['maintenance_target'] : 'both', 'both'); ?>>
+                                    Todos os dispositivos (Desktop e Mobile)
+                                </label>
+                                <label style="display:block;margin-bottom:8px;">
+                                    <input type="radio" name="<?php echo esc_attr($this->option_name); ?>[maintenance_target]" value="mobile" <?php checked(isset($settings['maintenance_target']) ? $settings['maintenance_target'] : '', 'mobile'); ?>>
+                                    Apenas Mobile
+                                </label>
+                                <label style="display:block;">
+                                    <input type="radio" name="<?php echo esc_attr($this->option_name); ?>[maintenance_target]" value="desktop" <?php checked(isset($settings['maintenance_target']) ? $settings['maintenance_target'] : '', 'desktop'); ?>>
+                                    Apenas Desktop
+                                </label>
+                                <p class="description">Escolha em quais dispositivos a manutenção será exibida.</p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">
+                                <label for="maintenance_message">Mensagem de Manutenção</label>
+                            </th>
+                            <td>
+                                <input
+                                    type="text"
+                                    name="<?php echo esc_attr($this->option_name); ?>[maintenance_message]"
+                                    id="maintenance_message"
+                                    value="<?php echo esc_attr(isset($settings['maintenance_message']) ? $settings['maintenance_message'] : 'Site em manutenção. Voltaremos em breve!'); ?>"
+                                    class="regular-text">
+                                <p class="description">Mensagem exibida na página de manutenção.</p>
                             </td>
                         </tr>
                     </table>
